@@ -47,32 +47,25 @@ function add_tracks (data) -- if necessary, add tracks up to highest # in datafi
 end
 
 function add_media(track_no, vol_db, pan, path, position)
-  --msg ("processing line number: "..item_no.."\n")
   local track = reaper.GetTrack(0, track_no)
   reaper.SetMediaTrackInfo_Value(track, "I_SOLO", 0 )
   local vol_log = math.exp(vol_db*0.115129254)
   reaper.SetMediaTrackInfo_Value(track, "D_VOL", vol_log ) 
   reaper.SetMediaTrackInfo_Value(track, "D_PAN", pan ) 
   reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 1 )
-  --reaper.SetTrackSelected( track, true )
-  --item_count =  reaper.CountMediaItems( proj ) -- number of items before inserting current media
   reaper.InsertMedia(path, 0)
   
   --get the item number-- 
   media_count = 0 
-  msg (track_no.."  "..reaper.CountMediaItems( 0 ))
   if track_no > 0 and reaper.CountMediaItems( 0 ) ~= 1 then
-    msg ("true")
     for i = 0,(track_no-1) do
-      msg ("i = "..i)
       current_track = reaper.GetTrack(0, i)
       media_on_track = reaper.CountTrackMediaItems(current_track) 
-      msg ("media on track "..track_no.." = "..media_on_track)
       media_count = media_count + media_on_track
     end
   end
   item_no = media_count
-  msg ("\nmedia item no:"..item_no.."\n")
+  
   local item = reaper.GetSelectedMediaItem(0, item_no)
   reaper.SetMediaItemInfo_Value(item, "D_POSITION", position )
   reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 0 )
@@ -101,15 +94,13 @@ function process_file (data, folder)
       msg ("Pan out of range on track "..track_no.."; set to center.")
     end
  
-    --media_dir = "C:/Users/Johnny G/AppData/Roaming/REAPER/Scripts/Orfeo_test_dir"
-    --path = media_dir.."/"..media
     path = folder.."/"..media
     msg ("Line "..i.." processed:")
     msg ("track# = "..track_no)
     msg ('Media = '..media)
     msg ("Volume = "..vol_db)
     msg ("Pan = "..pan)
-    msg ("Pos = "..position.."s")
+    msg ("Position = "..position.."s\n")
     add_media(track_no-1, vol_db ,pan, path, position)
     
   end 
@@ -118,14 +109,10 @@ end
 
 function Main ()
   reaper.ShowConsoleMsg("")
-  
-  msg (reaper.CountMediaItems( 0 ))
-  
   retval, file = reaper.GetUserFileNameForRead("data", "Choose data file", "txt" )
   retval, folder = reaper.JS_Dialog_BrowseForFolder(caption, initialFolder)
   data = read_file (file)
   msg ("number of lines in data file: "..#data)
-  msg ("Parent media folder: "..folder.."\n") 
   process_file (data, folder)
   reaper.UpdateArrange()
 end 
