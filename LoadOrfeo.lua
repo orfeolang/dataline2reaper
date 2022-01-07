@@ -1,5 +1,3 @@
-
-
 function msg (input)
   reaper.ShowConsoleMsg("\n"..input)
 end
