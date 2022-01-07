@@ -28,18 +28,22 @@ function read_file (file)
   return result
 end
 
-function add_tracks (data) -- initially add tracks up to the highest number specified in the file 
-  if  not reaper.CountTracks( 0 ) == nil then
-    local max_tracks =  reaper.CountTracks( 0 )
-  else max_tracks = 0 
-  end
+function add_tracks (data) -- if necessary, add tracks up to highest # in datafile.
+  highest_track = 0
   for i = 1, #data do
     local tr = tonumber (get_track_no (data[i]))
-    if tr > max_tracks then max_tracks = tr end
-  end 
-  for i = 0, max_tracks-1 do
-    reaper.InsertTrackAtIndex(i, true)
+    if tr > highest_track then highest_track = tr end
   end
+  
+  local prev_tracks = reaper.CountTracks( 0 ) 
+  local tracks_to_add = highest_track - prev_tracks
+  
+  if tracks_to_add > 0 then
+    for i = 1,tracks_to_add do
+      reaper.InsertTrackAtIndex(i, true)
+    end
+  end
+
 end
 
 function add_media(track_no, vol_db, pan, path, position, item_no)
@@ -76,6 +80,7 @@ end
 
 function process_file (data, folder)
   add_tracks (data)
+  reaper.SelectAllMediaItems(0, false)
   for i = 1, #data do
     local parameters = split(data[i])
 
