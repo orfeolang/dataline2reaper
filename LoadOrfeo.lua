@@ -17,6 +17,14 @@ function add_track(track_no, vol_db, pan, path, position, item_no)
   reaper.SetMediaItemInfo_Value(item, "D_POSITION", position )
 end
 
+function get_track_no (line)
+  local result = {}
+  for datum in (line.." "):gmatch("(.-)".."(%s+)") do
+     table.insert(result, datum)
+     if result[2] then return result[2] end
+  end
+end
+
 function split (data)
   local result = {}
   for datum in (data.." "):gmatch("(.-)".."(%s+)") do
@@ -31,6 +39,19 @@ function read_file (file)
     result[#result + 1] = line
   end
   return result
+end
+
+function add_tracks (data, folder)
+  local seen = {}
+  local added_tr_no = 0
+  for i = 1, #data do
+    local tr = get_track_no (data[i])
+    if not seen [tr] == true then
+      added_tr_no = added_tr_no + 1
+      reaper.InsertTrackAtIndex(added_tr_no, true)
+      seen [tr] = true
+    end
+  end
 end
 
 function process_file (data, folder)
@@ -75,19 +96,23 @@ function process_file (data, folder)
     add_track(track_no, vol_db ,pan, path, position,i)
     
   end 
-  
+ 
 end
+
+  
 
 function Main ()
   reaper.ShowConsoleMsg("")
-  retval, file = reaper.GetUserFileNameForRead("data", "Choose data file location", "txt" )
+  --retval, file = reaper.GetUserFileNameForRead("data", "Choose data file", "txt" )
   --file = "C:/Users/Johnny G/Desktop/datafile.txt" 
-  retval, folder = reaper.JS_Dialog_BrowseForFolder(caption, initialFolder)
+  file = "D:/Tempakshawn/Lua Orfeo project/Datafile.txt" --temp working file
+  --retval, folder = reaper.JS_Dialog_BrowseForFolder(caption, initialFolder)
+  folder = "D:/Tempakshawn/Lua Orfeo project/media" --temp working folder
   data = read_file (file)
   msg ("number of lines in data file: "..#data)
   msg ("Parent media folder: "..folder.."\n") 
-  process_file (data, folder)
-  
+  --process_file (data, folder)
+  add_tracks (data,folder)
   reaper.UpdateArrange()
 end 
  
