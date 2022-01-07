@@ -121,11 +121,8 @@ function Main ()
   
   msg (reaper.CountMediaItems( 0 ))
   
-  --retval, file = reaper.GetUserFileNameForRead("data", "Choose data file", "txt" )
-  --file = "C:/Users/Johnny G/Desktop/datafile.txt" 
-  file = "D:/Tempakshawn/Lua Orfeo project/Datafile.txt" --temp working file
-  --retval, folder = reaper.JS_Dialog_BrowseForFolder(caption, initialFolder)
-  folder = "D:/Tempakshawn/Lua Orfeo project/media" --temp working folder
+  retval, file = reaper.GetUserFileNameForRead("data", "Choose data file", "txt" )
+  retval, folder = reaper.JS_Dialog_BrowseForFolder(caption, initialFolder)
   data = read_file (file)
   msg ("number of lines in data file: "..#data)
   msg ("Parent media folder: "..folder.."\n") 
