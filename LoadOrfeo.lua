@@ -46,7 +46,7 @@ function add_tracks (data) -- if necessary, add tracks up to highest # in datafi
 
 end
 
-function add_media(track_no, vol_db, pan, path, position, item_no)
+function add_media(track_no, vol_db, pan, path, position)
   --msg ("processing line number: "..item_no.."\n")
   local track = reaper.GetTrack(0, track_no)
   reaper.SetMediaTrackInfo_Value(track, "I_SOLO", 0 )
@@ -110,7 +110,7 @@ function process_file (data, folder)
     msg ("Volume = "..vol_db)
     msg ("Pan = "..pan)
     msg ("Pos = "..position.."s")
-    add_media(track_no-1, vol_db ,pan, path, position, i-1)
+    add_media(track_no-1, vol_db ,pan, path, position)
     
   end 
  
