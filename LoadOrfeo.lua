@@ -47,35 +47,51 @@ function add_media(track_no, vol_db, pan, path, position, item_no)
   --select active track. Hopefully this means "current track"
   reaper.SetMediaTrackInfo_Value(track, "I_SOLO", 0 )
   local vol_log = math.exp(vol_db*0.115129254)
-  reaper.SetMediaTrackInfo_Value(track, "D_VOL", vol_log )
-  reaper.SetMediaTrackInfo_Value(track, "D_PAN", pan )
+  if not vol_db == "X" then reaper.SetMediaTrackInfo_Value(track, "D_VOL", vol_log ) end
+  if not pan == "X" then reaper.SetMediaTrackInfo_Value(track, "D_PAN", pan ) end
   reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 1 )
   reaper.SetTrackSelected( track, true )
   reaper.InsertMedia(path, 0)
-  local item = reaper.GetSelectedMediaItem(0, item_no-1 )
+  local item = reaper.GetSelectedMediaItem(0, item_no )
   reaper.SetMediaItemInfo_Value(item, "D_POSITION", position )
 end
 
 function process_file (data, folder)
-  --add_tracks (data)
+  add_tracks (data)
+  if not reaper.CountMediaItems( 0 ) == nil then 
+       local item_count =  reaper.CountMediaItems( 0 ) 
+       mwg ("number of existing media item: "..item_count)
+  else item_count = 0
+  end
+  
   for i = 1, #data do
     local parameters = split(data[i])
 
     local position = tonumber (parameters[1])
     local track_no = tonumber (parameters[2])
-    local vol_db = tonumber (parameters [3])
-    local pan = tonumber (parameters [4])
-    local media = parameters[5]
-  
-    if vol_db > 12
-      then 
-      msg ("Volume out of range; Default volume set.")
-      vol_db = 12
+    
+    if parameters[3] == "X" then 
+      local vol_db = "X" 
+    else vol_db = tonumber (parameters [3])
     end
     
-    if pan > 1 or pan < -1
-      then pan = 0
-      msg ("Pan out of range; set to center.")
+    if parameters[4] == "X" then 
+      local pan = "X" 
+    else pan = tonumber (parameters [4])
+    end
+    
+    local media = parameters[5]
+    
+    if not vol_db == "X" and not pan == "X" then
+      if vol_db > 12
+        then 
+        msg ("Volume out of range on track "..track_no.."; Default volume set.")
+        vol_db = 12
+      end
+      if pan > 1 or pan < -1
+        then pan = 0
+        msg ("Pan out of range on track "..track_no.."; set to center.")
+      end
     end
     
     --media_dir = "C:/Users/Johnny G/AppData/Roaming/REAPER/Scripts/Orfeo_test_dir"
@@ -88,7 +104,7 @@ function process_file (data, folder)
     msg ("Volume = "..vol_db)
     msg ("Pan = "..pan)
     msg ("Pos = "..position.."s")
-    add_media(track_no-1, vol_db ,pan, path, position,i)
+    add_media(track_no-1, vol_db ,pan, path, position, item_count + i - 1)
     
   end 
  
@@ -106,7 +122,6 @@ function Main ()
   data = read_file (file)
   msg ("number of lines in data file: "..#data)
   msg ("Parent media folder: "..folder.."\n") 
-  add_tracks (data)
   process_file (data, folder)
   reaper.UpdateArrange()
 end 
