@@ -101,20 +101,14 @@ end
 
 function Main ()
   reaper.ShowConsoleMsg("")
-  --retval, file = reaper.GetUserFileNameForRead("data", "Choose data file", "txt" )
-  --retval, folder = reaper.JS_Dialog_BrowseForFolder(caption, initialFolder)
-  file = "D:/Tempakshawn/Lua Orfeo project/Datafile.txt"
-  folder = "D:/Tempakshawn/Lua Orfeo project/media"
+  retval, file = reaper.GetUserFileNameForRead("data", "Choose data file", "txt" )
+  retval, folder = reaper.JS_Dialog_BrowseForFolder(caption, initialFolder)
   data = read_file (file)
   msg ("number of lines in data file: "..#data)
   process_file (data, folder)
   reaper.UpdateArrange()
 end 
 
---[[to do: 
-allow adding more than one media item a single track; prevent errors if tracks in datfile
-already contain items.--]]
-  
 Main()
 
 
