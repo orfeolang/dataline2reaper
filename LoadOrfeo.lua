@@ -47,15 +47,20 @@ end
 function add_media(track_no, vol_db, pan, path, position)
   local track = reaper.GetTrack(0, track_no)
   reaper.SetMediaTrackInfo_Value(track, "I_SOLO", 0 )
-  local vol_log = math.exp(vol_db*0.115129254)
+  local vol_log = math.exp(vol_db*0.115129254) --convert db to log
   reaper.SetMediaTrackInfo_Value(track, "D_VOL", vol_log ) 
   reaper.SetMediaTrackInfo_Value(track, "D_PAN", pan ) 
   reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 1 )
+  reaper.SelectAllMediaItems(0, false ) --make sure only selected item will be new item
   reaper.InsertMedia(path, 0)
-  local item =  reaper.GetSelectedMediaItem( 0, 0 )
-  reaper.SetMediaItemPosition(item, position, true )
+  local item =  reaper.GetSelectedMediaItem( 0, 0 ) --address of added item
+  reaper.SetMediaItemInfo_Value( item, "D_POSITION", position) --reposition the item
+  --reaper.SetMediaItemPosition(item, position, true )
+  --reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 0 )
+  reaper.SelectAllMediaItems(0, false ) --unselect all items
+  reaper.Main_OnCommand (40297, 0) --unselect all tracks
+  reaper.Main_OnCommand( 40042, 0 ) --rewind to start of project. Looks cleaner when adding media.
   
- 
 end
 
 function process_file (data, folder)
@@ -90,9 +95,8 @@ function process_file (data, folder)
     msg ("Pan = "..pan)
     msg ("Position = "..position.."s\n")
     
-    
   end 
- 
+  
 end
 
 function Main ()
