@@ -45,51 +45,17 @@ function add_tracks (data) -- if necessary, add tracks up to highest # in datafi
 end
 
 function add_media(track_no, vol_db, pan, path, position)
---note: track and item numbers begin at 0.
   local track = reaper.GetTrack(0, track_no)
   reaper.SetMediaTrackInfo_Value(track, "I_SOLO", 0 )
   local vol_log = math.exp(vol_db*0.115129254)
   reaper.SetMediaTrackInfo_Value(track, "D_VOL", vol_log ) 
   reaper.SetMediaTrackInfo_Value(track, "D_PAN", pan ) 
+  reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 1 )
+  reaper.InsertMedia(path, 0)
+  local item =  reaper.GetSelectedMediaItem( 0, 0 )
+  reaper.SetMediaItemPosition(item, position, true )
   
-  --[[get the number of the item we are going to add. 
-  Note that media items are numbered sequentially by order of appearance in the track
-  window.
-  item_no =(#items on prev tracks) + (#items already on track BEFORE item)
-  --]]
-  
-  media_count = 0 
-  --Count all items on previous tracks__
-  if track_no > 0 and reaper.CountMediaItems( 0 ) ~= 1 then
-    for i = 0,(track_no-1) do
-      local current_track = reaper.GetTrack(0, i)
-      local media_on_track = reaper.CountTrackMediaItems(current_track) 
-      media_count = media_count + media_on_track
-    end
-  end
-  --Count all items on current tracks positioned before current item.--
-  local other_itemss = reaper.CountTrackMediaItems (track) - 1
-  if not other_items == nil then
-    local first_item_no = media_count --address of first item on track
-    for i = first_item_no, (first_item_no + other_items - 1) do
-      -- (subtract 1 because don't count first item) --
-      local item = reaper.GetSelectedMediaItem(0, i)
-      if reaper.GetMediaItemInfo_Value(item, "D_POSITION") <= position then
-        media_count = media_count + 1
-      end
-    end
-  end
-      
-  item_no = media_count --(because items start at 0, = media_count)
-  msg (item_no.." "..track_no)
-  track = reaper.GetTrack(0, track_no)
-  reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 1 ) --select track in datafile
-  reaper.InsertMedia(path, 0) --insert specified media on the track
-  local item = reaper.GetSelectedMediaItem(0, 0) --get address of this item
-  msg (item)
-  --reaper.SetMediaItemPosition(item, position, refreshUI )
-  --reaper.SetMediaItemInfo_Value(item, "D_POSITION", position ) --reposition the media
-  --reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 0 ) --unselect the track
+ 
 end
 
 function process_file (data, folder)
