@@ -53,7 +53,8 @@ function add_media(track_no, vol_db, pan, path, position)
   reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 1 )
   reaper.InsertMedia(path, 0)
   
-  --get the item number-- 
+  --[[get the item number. ]]
+
   media_count = 0 
   if track_no > 0 and reaper.CountMediaItems( 0 ) ~= 1 then
     for i = 0,(track_no-1) do
@@ -93,13 +94,14 @@ function process_file (data, folder)
     end
  
     path = folder.."/"..media
+    add_media(track_no-1, vol_db ,pan, path, position)
     msg ("Line "..i.." processed:")
     msg ("track# = "..track_no)
     msg ('Media = '..media)
     msg ("Volume = "..vol_db)
     msg ("Pan = "..pan)
     msg ("Position = "..position.."s\n")
-    add_media(track_no-1, vol_db ,pan, path, position)
+    
     
   end 
  
