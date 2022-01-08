@@ -53,7 +53,9 @@ function add_media(track_no, vol_db, pan, path, position)
   reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 1 )
   reaper.InsertMedia(path, 0)
   
-  --[[get the item number. ]]
+  --[[get the item number. 
+  Note that media items are numbered sequentially by order of appearance in the track
+  window.--]]
 
   media_count = 0 
   if track_no > 0 and reaper.CountMediaItems( 0 ) ~= 1 then
