@@ -2,7 +2,7 @@ function msg (input)
   reaper.ShowConsoleMsg("\n"..input)
 end
 
-function get_track_no (line) --gets track number in a given line
+function get_track_no (line) -- Gets track number in a given line.
   local result = {}
   for datum in (line.." "):gmatch("(.-)".."(%s+)") do
      table.insert(result, datum)
@@ -26,7 +26,7 @@ function read_file (file)
   return result
 end
 
-function add_tracks (data) -- if necessary, add tracks up to highest # in datafile.
+function add_tracks (data) -- If necessary, add tracks up to highest # in datafile.
   highest_track = 0
   for i = 1, #data do
     local tr = tonumber (get_track_no (data[i]))
@@ -47,19 +47,19 @@ end
 function add_media(track_no, vol_db, pan, path, position)
   local track = reaper.GetTrack(0, track_no)
   reaper.SetMediaTrackInfo_Value(track, "I_SOLO", 0 )
-  local vol_log = math.exp(vol_db*0.115129254) --convert db to log
+  local vol_log = math.exp(vol_db*0.115129254) -- Convert db to log.
   reaper.SetMediaTrackInfo_Value(track, "D_VOL", vol_log )
   reaper.SetMediaTrackInfo_Value(track, "D_PAN", pan )
   reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 1 )
-  reaper.SelectAllMediaItems(0, false ) --make sure only selected item will be new item
+  reaper.SelectAllMediaItems(0, false ) -- Make sure only selected item will be new item.
   reaper.InsertMedia(path, 0)
-  local item =  reaper.GetSelectedMediaItem( 0, 0 ) --address of added item
-  reaper.SetMediaItemInfo_Value( item, "D_POSITION", position) --reposition the item
-  --reaper.SetMediaItemPosition(item, position, true )
-  --reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 0 )
-  reaper.SelectAllMediaItems(0, false ) --unselect all items
-  reaper.Main_OnCommand (40297, 0) --unselect all tracks
-  reaper.Main_OnCommand( 40042, 0 ) --rewind to start of project. Looks cleaner when adding media.
+  local item =  reaper.GetSelectedMediaItem( 0, 0 ) -- Address of added item.
+  reaper.SetMediaItemInfo_Value( item, "D_POSITION", position) -- Reposition the item.
+  -- reaper.SetMediaItemPosition(item, position, true )
+  -- reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 0 )
+  reaper.SelectAllMediaItems(0, false ) -- Unselect all items.
+  reaper.Main_OnCommand (40297, 0) -- Unselect all tracks.
+  reaper.Main_OnCommand( 40042, 0 ) -- Rewind to start of project. Looks cleaner when adding media.
 
 end
 
