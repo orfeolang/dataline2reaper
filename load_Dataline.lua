@@ -75,14 +75,13 @@ function process_file (data, folder)
     local pan = tonumber (parameters [4])
     local media = parameters[5]
 
-    if vol_db > 12
-      then
+    if vol_db > 12 then
       msg ("Volume out of range on track "..track_no.."; Default volume set.")
       vol_db = 12
     end
 
-    if pan > 1 or pan < -1
-      then pan = 0
+    if pan > 1 or pan < -1 then
+      pan = 0
       msg ("Pan out of range on track "..track_no.."; set to center.")
     end
 
