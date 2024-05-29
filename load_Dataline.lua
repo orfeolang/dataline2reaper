@@ -20,7 +20,7 @@ end
 
 function read_file (file)
   local result = {}
-  for line in io.lines(file) do 
+  for line in io.lines(file) do
     result[#result + 1] = line
   end
   return result
@@ -32,10 +32,10 @@ function add_tracks (data) -- if necessary, add tracks up to highest # in datafi
     local tr = tonumber (get_track_no (data[i]))
     if tr > highest_track then highest_track = tr end
   end
-  
-  local prev_tracks = reaper.CountTracks( 0 ) 
+
+  local prev_tracks = reaper.CountTracks( 0 )
   local tracks_to_add = highest_track - prev_tracks
-  
+
   if tracks_to_add > 0 then
     for i = 1,tracks_to_add do
       reaper.InsertTrackAtIndex(i, true)
@@ -48,8 +48,8 @@ function add_media(track_no, vol_db, pan, path, position)
   local track = reaper.GetTrack(0, track_no)
   reaper.SetMediaTrackInfo_Value(track, "I_SOLO", 0 )
   local vol_log = math.exp(vol_db*0.115129254) --convert db to log
-  reaper.SetMediaTrackInfo_Value(track, "D_VOL", vol_log ) 
-  reaper.SetMediaTrackInfo_Value(track, "D_PAN", pan ) 
+  reaper.SetMediaTrackInfo_Value(track, "D_VOL", vol_log )
+  reaper.SetMediaTrackInfo_Value(track, "D_PAN", pan )
   reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 1 )
   reaper.SelectAllMediaItems(0, false ) --make sure only selected item will be new item
   reaper.InsertMedia(path, 0)
@@ -60,7 +60,7 @@ function add_media(track_no, vol_db, pan, path, position)
   reaper.SelectAllMediaItems(0, false ) --unselect all items
   reaper.Main_OnCommand (40297, 0) --unselect all tracks
   reaper.Main_OnCommand( 40042, 0 ) --rewind to start of project. Looks cleaner when adding media.
-  
+
 end
 
 function process_file (data, folder)
@@ -74,18 +74,18 @@ function process_file (data, folder)
     local  vol_db = tonumber (parameters [3])
     local pan = tonumber (parameters [4])
     local media = parameters[5]
-    
+
     if vol_db > 12
-      then 
+      then
       msg ("Volume out of range on track "..track_no.."; Default volume set.")
       vol_db = 12
     end
-    
+
     if pan > 1 or pan < -1
       then pan = 0
       msg ("Pan out of range on track "..track_no.."; set to center.")
     end
- 
+
     path = folder.."/"..media
     add_media(track_no-1, vol_db ,pan, path, position)
     msg ("Line "..i.." processed:")
@@ -94,9 +94,9 @@ function process_file (data, folder)
     msg ("Volume = "..vol_db)
     msg ("Pan = "..pan)
     msg ("Position = "..position.."s\n")
-    
-  end 
-  
+
+  end
+
 end
 
 function Main ()
@@ -107,11 +107,6 @@ function Main ()
   msg ("number of lines in data file: "..#data)
   process_file (data, folder)
   reaper.UpdateArrange()
-end 
+end
 
 Main()
-
-
-
-
-
