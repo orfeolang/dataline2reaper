@@ -41,7 +41,6 @@ function add_tracks (data) -- If necessary, add tracks up to highest # in datafi
       reaper.InsertTrackAtIndex(i, true)
     end
   end
-
 end
 
 function add_media(track_no, vol_db, pan, path, position)
@@ -60,7 +59,6 @@ function add_media(track_no, vol_db, pan, path, position)
   reaper.SelectAllMediaItems(0, false ) -- Unselect all items.
   reaper.Main_OnCommand (40297, 0) -- Unselect all tracks.
   reaper.Main_OnCommand( 40042, 0 ) -- Rewind to start of project. Looks cleaner when adding media.
-
 end
 
 function process_file (data, folder)
@@ -93,9 +91,7 @@ function process_file (data, folder)
     msg ("Volume = "..vol_db)
     msg ("Pan = "..pan)
     msg ("Position = "..position.."s\n")
-
   end
-
 end
 
 function Main ()
