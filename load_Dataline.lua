@@ -44,6 +44,26 @@ function getData(file)
     return data
 end
 
+function inArray(t, search)
+    for i, v in ipairs(t) do
+        if v == search then
+            return true
+        end
+  end
+  return false
+end
+
+function getVoices(data)
+    local voices = {}
+    for i = 1, #data do
+        if not inArray(voices, data[i]['voice']) then
+            voices[#voices + 1] = data[i]['voice']
+        end
+    end
+    table.sort(voices)
+    return voices
+end
+
 function main()
     local wasFileRead, file = reaper.GetUserFileNameForRead(
       '', 'Choose a *.dataline file.', 'dataline'
@@ -52,6 +72,9 @@ function main()
             -- Note: Assumes the Dataline file is valid.
         data = getData(file)
         print(dump(data))
+
+        local voices = getVoices(data)
+        print(dump(voices))
     end
 end
 
