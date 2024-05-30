@@ -64,6 +64,22 @@ function getVoices(data)
     return voices
 end
 
+function nameTrack(trackIndex, voiceNumber)
+    local track = reaper.GetTrack(0, trackIndex)
+    local name = 'voice ' .. voiceNumber
+    reaper.GetSetMediaTrackInfo_String(
+        track, 'P_NAME', name, true
+    )
+end
+
+function addTracks(voices)
+    for i = 1, #voices do
+        local index = i - 1
+        reaper.InsertTrackAtIndex(index, true)
+        nameTrack(index, voices[i])
+    end
+end
+
 function main()
     local wasFileRead, file = reaper.GetUserFileNameForRead(
       '', 'Choose a *.dataline file.', 'dataline'
@@ -75,6 +91,9 @@ function main()
 
         local voices = getVoices(data)
         print(dump(voices))
+
+        addTracks(voices)
+        reaper.UpdateArrange()
     end
 end
 
