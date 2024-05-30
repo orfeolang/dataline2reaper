@@ -49,8 +49,8 @@ function inArray(t, search)
         if v == search then
             return true
         end
-  end
-  return false
+    end
+    return false
 end
 
 function getVoices(data)
