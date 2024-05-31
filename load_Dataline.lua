@@ -1,10 +1,16 @@
-function print(v) reaper.ShowConsoleMsg(v .. '\n') end
-function trim(s) return s:match '^%s*(.-)%s*$' end
-function isComment(s) return s:sub(1, 1) == '#' end
-function hasData(s) return not (s == '' or isComment(s)) end
-function hasWhitespace(s) return s:find('%s', 1, false) end
+---------------------------------------------------------------------
+-- Config
 
-function dump(o, i)
+DEFAULT_SOUND_EXTENSION = 'aiff'
+REMOVE_ALL_TRACKS_BEFORE_START = true
+DATALINE_FILE_PATH = '/my/dataline/file.dataline'
+SOUND_FOLDER_PATH = '/my/sound/path/'
+
+----------------------------------------------------------------------
+-- General Utilities
+
+    -- Debug helper - Ex: print(dump(myTable))
+function dump (o, i)
     local indentationWidth = 4
     i = i or 0 -- Indentation.
     if type(o) == 'table' then
@@ -22,49 +28,89 @@ function dump(o, i)
     end
 end
 
-function getData(file)
-    local data = {}
-    for line in io.lines(file) do
-        line = trim(line)
-        if hasData(line) then
-            local time, voice, event = line:match '^(.-)%s+(.-)%s+(.-)$'
-            local datum = {}
-            datum['time'] = tonumber(time)
-            datum['voice'] = tonumber(voice)
-            if hasWhitespace(event) then
-                local eventType, eventData = event:match"^(.-)%s+(.-)$"
-                datum['eventType'] = eventType
-                datum['eventData'] = eventData
-            else
-                datum['eventType'] = event
-            end
-            data[#data + 1] = datum
-        end
+function trim (s) return s:match '^%s*(.-)%s*$' end
+function hasWhitespace (s) return s:find('%s', 1, false) end
+function hasExtension (s) return s:match '^.+(%..+)$' ~= nil end
+function getPathSeparator () return package.config:sub(1, 1) end
+
+function splitOnWhitespace (data)
+    local result = {}
+    for datum in (data .. ' '):gmatch('(.-)%s+') do
+        table.insert(result, datum)
     end
-    return data
+    return result
 end
 
-function inArray(t, search)
-    for i, v in ipairs(t) do
-        if v == search then
+function inIpairs (t, target)
+    for _, v in ipairs(t) do
+        if v == target then
             return true
         end
     end
     return false
 end
 
-function getVoices(data)
+----------------------------------------------------------------------
+-- Program
+
+    -- Main_OnCommand
+local MOC = {
+    REMOVE_ALL_SELECTED_TRACKS = 40005,
+    REWIND_TO_START = 40042,
+    SELECT_ALL_TRACKS = 40296,
+    UNSELECT_ALL_TRACKS = 40297,
+}
+
+function isComment (s) return s:sub(1, 1) == '#' end
+function hasData (s) return not (s == '' or isComment(s)) end
+function print (v) reaper.ShowConsoleMsg(v .. '\n') end
+function isFile (path) return reaper.file_exists(path) end
+function isNote(v) return v['type'] == 'note' and v['data'] ~= nil end
+
+function reaper_RemoveAllTracks ()
+    reaper.Main_OnCommand(MOC['SELECT_ALL_TRACKS'], 0)
+    reaper.Main_OnCommand(MOC['REMOVE_ALL_SELECTED_TRACKS'], 0)
+end
+
+function reaper_InterfaceReset ()
+    reaper.Main_OnCommand(MOC['UNSELECT_ALL_TRACKS'], 0)
+    reaper.Main_OnCommand(MOC['REWIND_TO_START'], 0)
+end
+
+function getData (datalinePath)
+    local data = {}
+    for line in io.lines(datalinePath) do
+        line = trim(line)
+        if hasData(line) then
+            local time, voice, type_data = line:match '^(.-)%s+(.-)%s+(.-)$'
+            local event = {}
+            event['time'] = tonumber(time)
+            event['voice'] = tonumber(voice)
+            if hasWhitespace(type_data) then
+                local type, data = type_data:match"^(.-)%s+(.-)$"
+                event['type'] = type
+                event['data'] = data
+            else
+                event['type'] = type_data
+            end
+            table.insert(data, event)
+        end
+    end
+    return data
+end
+
+function getVoices (data)
     local voices = {}
-    for i = 1, #data do
-        if not inArray(voices, data[i]['voice']) then
-            voices[#voices + 1] = data[i]['voice']
+    for _, v in ipairs(data) do
+        if not inIpairs(voices, v['voice']) then
+            table.insert(voices, v['voice'])
         end
     end
     table.sort(voices)
     return voices
 end
 
-function nameTrack(trackIndex, voiceNumber)
+function nameTrack (trackIndex, voiceNumber)
     local track = reaper.GetTrack(0, trackIndex)
     local name = 'voice ' .. voiceNumber
     reaper.GetSetMediaTrackInfo_String(
@@ -72,27 +118,100 @@ function nameTrack(trackIndex, voiceNumber)
     )
 end
 
-function addTracks(voices)
-    for i = 1, #voices do
-        local index = i - 1
-        reaper.InsertTrackAtIndex(index, true)
-        nameTrack(index, voices[i])
+function addTracks (voices)
+    for i, v in ipairs(voices) do
+        local trackIndex = i - 1
+        reaper.InsertTrackAtIndex(trackIndex, true)
+        nameTrack(trackIndex, v)
     end
 end
 
+function getTrackIndexFromVoice (voices, voice)
+    for i, v in ipairs(voices) do
+        if v == voice then
+            return i - 1
+        end
+    end
+    return nil
+end
+
+function addMedia (trackIndex, path, position)
+    local track = reaper.GetTrack(0, trackIndex)
+    reaper.SetMediaTrackInfo_Value(track, 'I_SELECTED', 1)
+    reaper.InsertMedia(path, 0)
+    local item = reaper.GetSelectedMediaItem(0, 0)
+    reaper.SetMediaItemInfo_Value(item, "D_POSITION", position) -- Reposition.
+    reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 0) -- Optional. For form.
+    reaper.SelectAllMediaItems(0, false)
+end
+
+function getDatalineFilePath (DATALINE_FILE_PATH)
+    local datalineFilePath
+    if DATALINE_FILE_PATH then
+        if not isFile(DATALINE_FILE_PATH) then
+            print('Error: DATALINE_FILE_PATH is not valid path.')
+        else
+            datalineFilePath = DATALINE_FILE_PATH
+        end
+    else
+        gotPath, path = reaper.GetUserFileNameForRead(
+            '', 'Choose a Dataline file.', '*.dataline'
+        )
+        if gotPath then
+            datalineFilePath = path
+        end
+    end
+    return datalineFilePath
+end
+
+function getSoundFolderPath (SOUND_FOLDER_PATH)
+    local soundFolderPath
+    if SOUND_FOLDER_PATH then
+        soundFolderPath = SOUND_FOLDER_PATH
+    else
+            -- Note: JS_Dialog_BrowseForFolder needs js_ReaScriptAPI installed.
+        gotPath, path = reaper.JS_Dialog_BrowseForFolder(
+            'Choose a sound folder.', nil
+        )
+        if gotPath then
+            soundFolderPath = path
+        end
+    end
+    return soundFolderPath
+end
+
 function main()
-    local wasFileRead, file = reaper.GetUserFileNameForRead(
-      '', 'Choose a *.dataline file.', 'dataline'
-    )
-    if wasFileRead then
+    reaper.ClearConsole()
+    local datalineFilePath = getDatalineFilePath(DATALINE_FILE_PATH)
+    local soundFolderPath = getSoundFolderPath(SOUND_FOLDER_PATH)
+    if datalineFilePath and soundFolderPath then
+        if REMOVE_ALL_TRACKS_BEFORE_START then reaper_RemoveAllTracks() end
+        reaper_InterfaceReset()
+            -- Get the path separator depending on OS.
+        local pathSeparator = getPathSeparator()
             -- Note: Assumes the Dataline file is valid.
-        data = getData(file)
-        print(dump(data))
-
+        local data = getData(datalineFilePath)
         local voices = getVoices(data)
-        print(dump(voices))
-
         addTracks(voices)
+        for _, v in ipairs(data) do
+            if isNote(v) then
+                local trackIndex = getTrackIndexFromVoice(voices, v['voice'])
+                local sounds = splitOnWhitespace(v['data'])
+                for __, sound in ipairs(sounds) do
+                    if not hasExtension(sound) then
+                        sound = sound .. '.' .. DEFAULT_SOUND_EXTENSION
+                    end
+                    local soundPath = soundFolderPath .. pathSeparator .. sound
+                    if isFile(soundPath) then
+                        addMedia(trackIndex, soundPath, v['time'])
+                    else
+                        print('Warning: The following sound file could not be found:')
+                        print(soundPath)
+                    end
+                end
+            end
+        end
+        reaper_InterfaceReset()
         reaper.UpdateArrange()
     end
 end
