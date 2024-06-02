@@ -31,7 +31,6 @@ end
 function trim (s) return s:match '^%s*(.-)%s*$' end
 function hasWhitespace (s) return s:find('%s', 1, false) end
 function hasExtension (s) return s:match '^.+(%..+)$' ~= nil end
-function getPathSeparator () return package.config:sub(1, 1) end
 
 function splitOnWhitespace (data)
     local result = {}
@@ -48,6 +47,13 @@ function inIpairs (t, target)
         end
     end
     return false
+end
+
+function getSortedTableKeys (t)
+    local keys = {}
+    for k in pairs(t) do table.insert(keys, k) end
+    table.sort(keys)
+    return keys
 end
 
 ----------------------------------------------------------------------
@@ -149,7 +155,8 @@ function getDatalineFilePath (DATALINE_FILE_PATH)
     local datalineFilePath
     if DATALINE_FILE_PATH then
         if not isFile(DATALINE_FILE_PATH) then
-            print('Error: DATALINE_FILE_PATH is not valid path.')
+            print('ERROR: DATALINE_FILE_PATH is not a valid path.')
+            print('  ' .. DATALINE_FILE_PATH)
         else
             datalineFilePath = DATALINE_FILE_PATH
         end
@@ -187,12 +194,11 @@ function main()
     if datalineFilePath and soundFolderPath then
         if REMOVE_ALL_TRACKS_BEFORE_START then reaper_RemoveAllTracks() end
         reaper_InterfaceReset()
-            -- Get the path separator depending on OS.
-        local pathSeparator = getPathSeparator()
             -- Note: Assumes the Dataline file is valid.
         local data = getData(datalineFilePath)
         local voices = getVoices(data)
         addTracks(voices)
+        local missingSoundFiles = {}
         for _, v in ipairs(data) do
             if isNote(v) then
                 local trackIndex = getTrackIndexFromVoice(voices, v['voice'])
@@ -201,14 +207,19 @@ function main()
                     if not hasExtension(sound) then
                         sound = sound .. '.' .. DEFAULT_SOUND_EXTENSION
                     end
-                    local soundPath = soundFolderPath .. pathSeparator .. sound
+                    local soundPath = soundFolderPath .. sound
                     if isFile(soundPath) then
                         addMedia(trackIndex, soundPath, v['time'])
                     else
-                        print('Warning: The following sound file could not be found:')
-                        print(soundPath)
+                        missingSoundFiles[soundPath] = 1
                     end
                 end
+            end
+        end
+        if missingSoundFiles then
+            print('WARNING: The following sound files could not be found:')
+            for _, soundFile in pairs(getSortedTableKeys(missingSoundFiles)) do
+                print('  ' .. soundFile)
             end
         end
         reaper_InterfaceReset()
