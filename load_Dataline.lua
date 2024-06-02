@@ -141,10 +141,38 @@ function getTrackIndexFromVoice (voices, voice)
     return nil
 end
 
-function addMedia (trackIndex, path, position)
+--[[
+integer reaper.InsertMedia(string file, integer mode)
+
+mode:
+    0=add to current track,
+    1=add new track,
+    3=add to selected items as takes,
+    &4=stretch/loop to fit time sel,
+    &8=try to match tempo 1x,
+    &16=try to match tempo 0.5x,
+    &32=try to match tempo 2x,
+    &64=don't preserve pitch when matching tempo,
+    &128=no loop/section if startpct/endpct set,
+    &256=force loop regardless of global preference for looping imported items,
+    &512=use high word as absolute track index if mode&3==0 or mode&2048,
+    &1024=insert into reasamplomatic on a new track (add 1 to insert on last selected track),
+    &2048=insert into open reasamplomatic instance (add 512 to use high word as absolute track index),
+    &4096=move to source preferred position (BWF start offset),
+    &8192=reversep
+]]--
+
+local insertMediaMode = {
+    ADD_TO_CURRENT_TRACK = 0,
+    REVERSED = 8192,
+}
+
+function addMedia (trackIndex, path, position, isReversed)
     local track = reaper.GetTrack(0, trackIndex)
     reaper.SetMediaTrackInfo_Value(track, 'I_SELECTED', 1)
-    reaper.InsertMedia(path, 0)
+    local mode = insertMediaMode['ADD_TO_CURRENT_TRACK']
+    if isReversed then mode = mode + insertMediaMode['REVERSED'] end
+    reaper.InsertMedia(path, mode)
     local item = reaper.GetSelectedMediaItem(0, 0)
     reaper.SetMediaItemInfo_Value(item, "D_POSITION", position) -- Reposition.
     reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 0) -- Optional. For form.
@@ -187,6 +215,13 @@ function getSoundFolderPath (SOUND_FOLDER_PATH)
     return soundFolderPath
 end
 
+function checkIfSoundIsReversed (sound)
+    if sound:sub(1, 1) == '-' then
+        return true, sound:sub(2)
+    end
+    return false, sound
+end
+
 function main()
     reaper.ClearConsole()
     local datalineFilePath = getDatalineFilePath(DATALINE_FILE_PATH)
@@ -204,19 +239,21 @@ function main()
                 local trackIndex = getTrackIndexFromVoice(voices, v['voice'])
                 local sounds = splitOnWhitespace(v['data'])
                 for __, sound in ipairs(sounds) do
+                    local isReversed, sound = checkIfSoundIsReversed(sound)
                     if not hasExtension(sound) then
                         sound = sound .. '.' .. DEFAULT_SOUND_EXTENSION
                     end
                     local soundPath = soundFolderPath .. sound
                     if isFile(soundPath) then
-                        addMedia(trackIndex, soundPath, v['time'])
+                        addMedia(trackIndex, soundPath, v['time'], isReversed)
                     else
                         missingSoundFiles[soundPath] = 1
                     end
                 end
             end
         end
-        if missingSoundFiles then
+        local next = next -- Optimization.
+        if next(missingSoundFiles) ~= nil then -- If missingSoundFiles has elements.
             print('WARNING: The following sound files could not be found:')
             for _, soundFile in pairs(getSortedTableKeys(missingSoundFiles)) do
                 print('  ' .. soundFile)
