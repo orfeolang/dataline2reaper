@@ -164,6 +164,19 @@ mode:
     &8192=reversep
 ]]--
 
+function clip (num, min, max)
+    if num < min then num = min end
+    if num > max then num = max end
+    return num
+end
+
+function getRangeInPercentages (item, start, ending)
+    local length = reaper_GetMediaItemLength(item)
+    start = clip(start, 0, length)
+    ending = clip(ending, 0, length)
+    return start / length, ending / length
+end
+
 function reaper_GetMediaItemLength (item)
     local take = reaper.GetTake(item, 0)
     local source = reaper.GetMediaItemTake_Source(take)
