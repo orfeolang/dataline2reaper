@@ -162,6 +162,12 @@ mode:
     &8192=reversep
 ]]--
 
+function reaper_GetMediaItemLength (item)
+    local take = reaper.GetTake(item, 0)
+    local source = reaper.GetMediaItemTake_Source(take)
+    return reaper.GetMediaSourceLength(source)
+end
+
 local insertMediaMode = {
     ADD_TO_CURRENT_TRACK = 0,
     REVERSED = 8192,
