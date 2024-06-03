@@ -62,6 +62,7 @@ end
     -- Main_OnCommand
 local MOC = {
     REMOVE_ALL_SELECTED_TRACKS = 40005,
+    REMOVE_TIME_AND_LOOP_SELECTION = 40020,
     REWIND_TO_START = 40042,
     SELECT_ALL_TRACKS = 40296,
     UNSELECT_ALL_TRACKS = 40297,
@@ -81,6 +82,7 @@ end
 function reaper_InterfaceReset ()
     reaper.Main_OnCommand(MOC['UNSELECT_ALL_TRACKS'], 0)
     reaper.Main_OnCommand(MOC['REWIND_TO_START'], 0)
+    reaper.Main_OnCommand(MOC['REMOVE_TIME_AND_LOOP_SELECTION'], 0)
 end
 
 function getData (datalinePath)
