@@ -143,44 +143,70 @@ function getTrackIndexFromVoice (voices, voice)
     return nil
 end
 
---[[
-integer reaper.InsertMedia(string file, integer mode)
-
-mode:
-    0=add to current track,
-    1=add new track,
-    3=add to selected items as takes,
-    &4=stretch/loop to fit time sel,
-    &8=try to match tempo 1x,
-    &16=try to match tempo 0.5x,
-    &32=try to match tempo 2x,
-    &64=don't preserve pitch when matching tempo,
-    &128=no loop/section if startpct/endpct set,
-    &256=force loop regardless of global preference for looping imported items,
-    &512=use high word as absolute track index if mode&3==0 or mode&2048,
-    &1024=insert into reasamplomatic on a new track (add 1 to insert on last selected track),
-    &2048=insert into open reasamplomatic instance (add 512 to use high word as absolute track index),
-    &4096=move to source preferred position (BWF start offset),
-    &8192=reversep
-]]--
-
 function clip (num, min, max)
     if num < min then num = min end
     if num > max then num = max end
     return num
 end
 
-function getRangeInPercentages (item, start, ending)
-    local length = reaper_GetMediaItemLength(item)
-    start = clip(start, 0, length)
-    ending = clip(ending, 0, length)
-    return start / length, ending / length
+function initRandomGenerator ()
+    math.randomseed(os.time())
+    math.random()
+    math.random()
+    math.random()
 end
 
-function reaper_GetMediaItemLength (item)
-    local take = reaper.GetTake(item, 0)
-    local source = reaper.GetMediaItemTake_Source(take)
-    return reaper.GetMediaSourceLength(source)
+function scale (num, oldMin, oldMax, newMin, newMax)
+    return newMin + (((newMax - newMin) * (num - oldMin)) / (oldMax - oldMin))
+end
+
+function hasSectOption(o)
+    for k, v in pairs(o) do
+        if k:sub(1, 4) == 'sect' then
+            return true
+        end
+    end
+    return false
+end
+
+function getRandomFloat(min, max)
+    return scale(math.random(), 0, 1, min, max)
+end
+
+-- percentage is between 0 and 1
+function getStartAndEndPctFromRandPct(percentage)
+    local maxStartPct = 1 - percentage
+    local startPct = getRandomFloat(0, maxStartPct)
+    return startPct, startPct + percentage
+end
+
+function getStartAndEndPct (path, o)
+    if o['sectRandPct'] then
+        return getStartAndEndPctFromRandPct(o['sectRandPct'])
+    elseif o['sectStartPct'] and o['sectEndPct'] then
+        return o['sectStartPct'], o['sectEndPct']
+    elseif o['sectStartPct'] and not o['sectEndSec'] then
+        return o['sectStartPct'], 1
+    elseif not o['sectStartSec'] and o['sectEndPct'] then
+        return 0, o['sectendPct']
+    else
+        local source = reaper.PCM_Source_CreateFromFile(path)
+        local length = reaper.GetMediaSourceLength(source)
+        if o['sectStartPct'] and o['sectEndSec'] then
+            return o['sectStartPct'], o['sectEndSec'] / length
+        elseif o['sectStartSec'] and o['sectEndPct'] then
+            return o['sectStartSec'] / length, o['sectEndPct']
+        elseif o['sectRandSec'] then
+            return getStartAndEndPctFromRandPct(o['sectRandSec'] / length)
+        elseif o['sectStartSec'] and o['sectEndSec'] then
+            return o['sectStartSec'] / length, o['sectEndSec'] / length
+        elseif o['sectStartSec'] then
+            return o['sectStartSec'] / length, 1
+        elseif o['sectEndSec'] then
+            return 0, o['sectEndSec'] / length
+        end
+    end
+    return 0, 1 -- Default.
 end
 
 local insertMediaMode = {
@@ -188,15 +214,58 @@ local insertMediaMode = {
     REVERSED = 8192,
 }
 
-function addMedia (trackIndex, path, position, isReversed)
+-----------------------------------------------------------'
+-- o = options
+--
+-- o['isReversed']   (bool)       Reverse audio.
+-- o['vol']          (num:  0->)  Volume. Ex: 0=-inf, 0.5=-6dB, 1=+0dB, 2=+6dB, etc
+-- o['pan']          (num: -1->1) Pan potition.
+-- o['playrate']     (num:  0->)  Playrate. Ex: 0.5=half speed, 1=normal, 2=double speed, etc
+-- o['pitch']        (num)        Pitch shift in semitones. Ex: -1.5 minus 1.5 semitones.
+-- o['doPPitch']     (bool)       Preserve pitch when changing playrate.
+-- o['sectStartPct'] (num:  0->1) Section start in percentage.
+-- o['sectEndPct']   (num:  0->1) Section end end in percentage.
+-- o['sectStartSec'] (num:  0->1) Section start in seconds.
+-- o['sectEndSec']   (num:  0->1) Section end in seconds.
+-- o['sectRandPct']  (num:  0->)  Random section in pecentage.
+-- o['sectRandSec']  (num:  0->)  Random section in seconds.
+--
+-- All options starting with sect are for determining the section
+-- of the audio file to play. If none are set, the entire file is played.
+-- These options can be conflicting, so there is an order of priority
+-- in which they are set. Percentages win out over seconds, and
+-- random sections win out over start/end combinations.
+--
+-- Ex 1) If 'sectRandPct' is set, it will win out over every other sect option
+-- and a random percentage of the section will be chosen for play.
+--
+-- Ex 2) If 'sectStartSec', 'sectEndSec', and 'sectEndPct' are set, the
+-- section will be determined by 'sectStartSec' and 'sectEndPct'.
+--
+-- Note: It's possible to set only start or only end. If start is missing,
+-- playing begins at the start of the section, and if end is missing,
+-- playing plays until the end of the section.
+-----------------------------------------------------------
+function reaper_AddMedia (trackIndex, path, position, o)
     local track = reaper.GetTrack(0, trackIndex)
     reaper.SetMediaTrackInfo_Value(track, 'I_SELECTED', 1)
     local mode = insertMediaMode['ADD_TO_CURRENT_TRACK']
-    if isReversed then mode = mode + insertMediaMode['REVERSED'] end
-    reaper.InsertMedia(path, mode)
+    if o['isReversed'] then mode = mode + insertMediaMode['REVERSED'] end
+    if hasSectOption(o) then
+        local startPct, endPct = getStartAndEndPct(path, o)
+        reaper.InsertMediaSection(path, mode, startPct, endPct, 0) -- 0 = no pitch shift.
+    else
+        reaper.InsertMedia(path, mode)
+    end
     local item = reaper.GetSelectedMediaItem(0, 0)
-    reaper.SetMediaItemInfo_Value(item, "D_POSITION", position) -- Reposition.
-    reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 0) -- Optional. For form.
+    reaper.SetMediaItemInfo_Value(item, "D_POSITION", position)
+    local take = reaper.GetTake(item, 0)
+    if o['vol']      then reaper.SetMediaItemTakeInfo_Value(take, 'D_VOL',      o['vol'])      end
+    if o['pan']      then reaper.SetMediaItemTakeInfo_Value(take, 'D_PAN',      o['pan'])      end
+    if o['playrate'] then reaper.SetMediaItemTakeInfo_Value(take, 'D_PLAYRATE', o['playrate']) end
+    if o['pitch']    then reaper.SetMediaItemTakeInfo_Value(take, 'D_PITCH',    o['pitch'])    end
+    if o['doPPitch'] then reaper.SetMediaItemTakeInfo_Value(take, 'D_PPITCH',   o['doPPitch']) end
+    reaper.SetMediaTrackInfo_Value(track, "I_SELECTED", 0)
     reaper.SelectAllMediaItems(0, false)
 end
 
@@ -244,6 +313,7 @@ function checkIfSoundIsReversed (sound)
 end
 
 function main()
+    initRandomGenerator()
     reaper.ClearConsole()
     local datalineFilePath = getDatalineFilePath(DATALINE_FILE_PATH)
     local soundFolderPath = getSoundFolderPath(SOUND_FOLDER_PATH)
@@ -265,8 +335,9 @@ function main()
                         sound = sound .. '.' .. DEFAULT_SOUND_EXTENSION
                     end
                     local soundPath = soundFolderPath .. sound
+                    local options = {}
                     if isFile(soundPath) then
-                        addMedia(trackIndex, soundPath, v['time'], isReversed)
+                        reaper_AddMedia(trackIndex, soundPath, v['time'], options)
                     else
                         missingSoundFiles[soundPath] = 1
                     end
