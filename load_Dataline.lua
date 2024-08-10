@@ -3,8 +3,8 @@
 
 DEFAULT_SOUND_EXTENSION = 'aiff'
 REMOVE_ALL_TRACKS_BEFORE_START = true
-DATALINE_FILE_PATH = '/my/dataline/file.dataline'
-SOUND_FOLDER_PATH = '/my/sound/path/'
+DATALINE_FILE_PATH = '/Users/pel/p/dataline2reaper/example/example.dataline'
+SOUND_FOLDER_PATH = '/Users/pel/p/dataline2reaper/example/sounds/'
 
 ----------------------------------------------------------------------
 -- General Utilities

@@ -1,0 +1,57 @@
+-- TOADD
+    -- Fades
+    -- Panlaw
+    -- MIDI
+
+
+
+
+----------------------------------------------------------------------
+
+params stay for everymore...
+
+-a,-a[v1/p4/p4]-a,shaker[v1/p4]
+
+`[v1\p4\p4|r1]  a,-a[v.1.3]a,-a                       # Put params first.
+
+vol1.0
+
+<-a -a [v1 p4 p4 r1] -a shaker [v1 p4]>
+
+----------------------------------------------------------------------
+
+-- Backtick note could be an option...
+
+`[v1]  `[v2]
+
+----------------------------------------------------------------------
+
+
+
+
+-DATALINE_FILE_PATH = '/my/dataline/file.dataline'
+-SOUND_FOLDER_PATH = '/my/sound/path/'
+
+
+
+
+
+-a\s2
+
+a/v10/r/s0.2/p01
+
+a\v10\s0.
+a-v10-r-s0.2-p01
+
+a_v10_r_s0.2_p01
+
+a|v10|r|s0.2|p01
+
+
+
+
+
+
+
+
+

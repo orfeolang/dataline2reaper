@@ -5,4 +5,5 @@
 # File loading: a.wav, a.aiff, a.mp3 (default = aiff)
 # --------------------------------------------------------------------
 
-0 1 tempo 60
+0   1 note swoosh.wav
+0.5 1 note shaker
